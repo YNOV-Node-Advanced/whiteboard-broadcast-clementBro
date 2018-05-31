@@ -10,6 +10,9 @@ const server = http.createServer(app);
 const PUBLIC_FOLDER = path.join(__dirname, "../public");
 const PORT = process.env.PORT || 5000;
 
+const socketsPerChannels = new Map();
+const channelPerSocket = new WeakMap();
+
 // Completer ce fichier
 const wss = new WebSocket.Server({ server });
 
@@ -41,3 +44,39 @@ app.get("/:channel", (req, res, next) => {
 
 app.use(express.static(PUBLIC_FOLDER));
 server.listen(PORT);
+
+function subscribe(socket: WebSocket, channel: string): void{
+    let socketSubscribed = socketsPerChannels.get(channel) || new Set();
+    let channelSubscribed = channelPerSocket.get(socket) || new Set();
+
+    socketsPerChannels.set(channel, socketSubscribed);
+    channelPerSocket.set(socket,channelSubscribed);
+};
+
+function unSubscribe(socket: WebSocket, channel: string): void{
+    let socketSubscribed = socketsPerChannels.get(channel) || new Set();
+    let channelSubscribed = channelPerSocket.get(socket) || new Set();
+
+    socketsPerChannels.delete(channel, socketSubscribed);
+    channelPerSocket.delete(socket,channelSubscribed);
+};
+
+function unSubscribeAll(socket: WebSocket): void{
+    let socketSubscribed = socketsPerChannels.get(channel) || new Set();
+    let channelSubscribed = channelPerSocket.get(socket) || new Set();
+
+    socketsPerChannels.delete(channel);
+    channelPerSocket.delete(socket);
+};
+
+function broadcast(socketForm: WebSocket, data: Buffer, channel: string): void {
+    const clients = socketsPerChannels.get(channel) || new Set();
+
+    clients.forEach(client => {
+        if(client == socket){
+            return;
+        }
+
+        client.send(data);
+    });
+}
